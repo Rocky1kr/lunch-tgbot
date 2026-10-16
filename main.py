@@ -2,6 +2,8 @@
 import json
 import os
 import random
+from ai import ask_ai
+from prompts import SYSTEM_PROMPT_CHAT
 
 import requests
 from dotenv import load_dotenv
@@ -61,7 +63,7 @@ def webhook(body: dict):
     elif text.startswith("/"):
         output = "모르는 명령이에요. /help 를 보내 보세요."
     else:
-        output = text  # 메아리
+        output = ask_ai(SYSTEM_PROMPT_CHAT, text)  # GPT가 대답
 
     requests.get(f"{URL}/sendMessage", params={"chat_id": chat_id, "text": output})  # 답장 보내기
     print("[보냄]", output)

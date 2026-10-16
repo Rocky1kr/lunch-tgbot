@@ -5,6 +5,10 @@
 - 확인: uv run pytest tests/test_ai.py
 """
 
+import os
+
+import openai
+
 FAKE_ANSWER = "[fake] 비 오는 날엔 따뜻한 김치찌개 어때요?"
 
 
@@ -18,4 +22,31 @@ def ask_ai(system, user_text):
     - openai.APIError가 나도 봇이 죽지 않게: 터미널에 오류를 찍고 "AI가 지금 답을 못 해요. 잠시 뒤에 다시 물어봐 주세요."
     - 성공하면 터미널에 [토큰] 입력 … · 출력 … 을 찍는다 (토큰 = 요금의 단위)
     """
-    raise NotImplementedError("Claude와 같이 채울 곳")
+    provider = os.getenv("AI_PROVIDER", "")
+    if provider in ("", "fake"):
+        return FAKE_ANSWER
+    if provider != "openai":
+        return "AI_PROVIDER는 openai 또는 fake 여야 해요."
+
+    model = os.getenv("AI_MODEL")
+    if not model:
+        return "AI_MODEL이 .env에 없어요."
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return "OPENAI_API_KEY가 .env에 없어요."
+
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        response = client.responses.create(
+            model=model,
+            instructions=system,
+            input=user_text,
+            max_output_tokens=1000,
+            reasoning={"effort": "low"},
+        )
+    except openai.APIError as e:
+        print("[AI 오류]", e)
+        return "AI가 지금 답을 못 해요. 잠시 뒤에 다시 물어봐 주세요."
+
+    print(f"[토큰] 입력 {response.usage.input_tokens} · 출력 {response.usage.output_tokens}")
+    return response.output_text
